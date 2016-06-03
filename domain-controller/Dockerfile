@@ -1,6 +1,8 @@
 FROM turnkeylinux/fileserver-13.0
 MAINTAINER 0xFC13F74B
 
+ENV affinity:net.matrix.application= infrastructure
+
 # the following are presented as generally accepted
 # values. In the case of personal certificates GN=, SN= or pseudonym=
 # can appear in the fields
