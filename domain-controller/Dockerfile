@@ -1,4 +1,4 @@
-FROM turnkeylinux/fileserver-13.0
+FROM turnkeylinux/domain-controller-13.0
 MAINTAINER 0xFC13F74B
 
 ENV affinity:net.matrix.application= infrastructure
