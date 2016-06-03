@@ -1,7 +1,7 @@
-FROM turnkeylinux/owncloud-14.0
+FROM turnkeylinux/observium-14.1
 MAINTAINER 0xFC13F74B
 
-ENV affinity:net.matrix.role==web*servers
+ENV affinity:net.matrix.application= infrastructure
 
 # the following are presented as generally accepted
 # values. In the case of personal certificates GN=, SN= or pseudonym=
@@ -15,13 +15,13 @@ ENV affinity:net.matrix.role==web*servers
 
 LABEL net.matrix.orgunit "Matrix NOC"
 LABEL net.matrix.organization "Private Ops"
-LABEL net.matrix.commonname "cloud"
+LABEL net.matrix.commonname "monitor"
 LABEL net.matrix.locality "Dallas"
 LABEL net.matrix.state "Texas"
 LABEL net.matrix.country "USA"
 LABEL net.matrix.environment "<nonprod|production|staging>"
-LABEL net.matrix.application "infrastructure"
-LABEL net.matrix.role "application services"
+LABEL net.matrix.application "services"
+LABEL net.matrix.role "monitoring"
 LABEL net.matrix.owner "FC13F74B@matrix.net"
 LABEL net.matrix.customer "PVT-01"
 LABEL net.matrix.costcenter "INT-01"
