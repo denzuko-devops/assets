@@ -15,7 +15,7 @@ ENV affinity:net.matrix.application= infrastructure
 
 LABEL net.matrix.orgunit "Matrix NOC"
 LABEL net.matrix.organization "Private Ops"
-LABEL net.matrix.commonname "files"
+LABEL net.matrix.commonname "dc1"
 LABEL net.matrix.locality "Dallas"
 LABEL net.matrix.state "Texas"
 LABEL net.matrix.country "USA"
