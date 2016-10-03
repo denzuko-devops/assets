@@ -1,4 +1,7 @@
 $VAGRANT_CONFIG_VERSON = 2
+Vagrant.require_plugin "vagrant-aws"
+Vagrant.require_plugin "vagrant-winrm-syncedfolders"
+
 Vagrant.configure($VAGRANT_CONFIG_VERSION) do |config|
   config.vm.box = "dummy"
   config.vm.box_url = "https://github.com/mitchellh/vagrant-aws/blob/master/dummy.box?raw=true"
