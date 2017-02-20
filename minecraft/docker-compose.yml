@@ -1,0 +1,109 @@
+---
+version: '2'
+services: 
+
+  dyndns:
+    tty: yes
+    image: sethcarstens/cloudflare-ddns
+    environment:
+      - "CF_EMAIL=${CF_ACCESS}"
+      - "CF_HOST=${VIRTUAL_HOST}"
+      - "CF_API=${CF_SECRET}"
+      
+  syslog:
+    privileged: yes
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    image: "logentries/docker-logentries"
+    command: "-t ${LE_TOKEN} -j -a host=${VIRTUAL_HOST}"
+
+  proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock:ro"
+    environment:
+      - "DEFAULT_HOST=${VIRTUAL_HOST}"
+      - "DOCKER_HOST=${DOCKER_HOST}"
+      - "DOCKER_TLS_VERIFY=${DOCKER_TLS_VERIFY}"
+      - "DOCKER_CERT_PATH=/data"
+    ports:
+      - "0.0.0.0:80:80/tcp"
+  
+  #
+  # Service Discovery - Consul
+  #
+  consul:
+    command: -server -bootstrap -advertise ${GENERIC_IP_ADDRESS}
+    image: progrium/consul:latest
+    ports:
+    - "8300:8300"
+    - "8400:8400"
+    - "8500:8500"
+    - "8600:53/udp"
+    
+  #
+  # Service Discovery - Registrator
+  #
+  registrator:
+    command: -ip=${GENERIC_IP_ADDRESS} consul://consul:8500
+    image: gliderlabs/registrator:latest
+    links:
+    - consul
+    volumes:
+    - "/var/run/docker.sock:/tmp/docker.sock"    
+
+  uptime:
+    restart: 'always'
+    image: "jwilder/whoami"
+    container_name: "uptime"
+    environment:
+      - "VIRTUAL_HOST=uptime.consul"
+      - "SERVICE_NAME=uptime"
+      
+  cron:
+    restart: 'always'
+    image: 'blacklabelops/jobber'
+    environment:
+      - "JOB_NAME1=UptimeMonitorPastieConsul"
+      - "JOB_COMMAND1=curl -sSLf -H 'Host: uptime.consul' -o /dev/null ${GENERIC_IP_ADDRESS} || echo 'Website down.' | mail -s '[Site Monitoring] ${GENERIC_IP_ADDRESS} is down' ${NOTIFY}"
+      - "JOB_TIME1=*/30 * * * * *"
+      - "JOB_ON_ERROR1=Stop"
+      
+  sysdig:
+    container_name: sysdig
+    privileged: true
+    stdin_open: true
+    tty: true
+    image: sysdig/sysdig:latest
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /dev:/host/dev
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+     
+  #
+  # Forge Minecraft Server
+  #
+  mcforge:
+    image: 'webhippie/minecraft-forge:10.13.4'
+    restart: 'always'
+    volumes:
+      - /srv/minecraft/merge:/minecraft/merge
+      - /srv/minecraft/world:/minecraft/world
+      - /srv/minecraft/logs:/minecraft/logs
+      - /srv/minecraft/dynmap:/minecraft/dynmap
+      - /srv/minecraft/mods:/minecraft/mods
+    environment:
+      - "VIRTUAL_HOST=minecraft.consul"
+      - "VIRTUAL_PORT=8123"
+    ports:
+      - 25565
+      - 25575
+
+networks: {}
+volumes: {}
