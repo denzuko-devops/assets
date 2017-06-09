@@ -1,0 +1,25 @@
+@version: 3.7
+options {
+  chain_hostnames(off);
+  flush_lines(0);
+  use_dns(no);
+  use_fqdn(no);
+  owner("root");
+  group("adm");
+  perm(0640);
+  stats_freq(0);
+  bad_hostname("^gconfd$");
+}
+
+sources s_net {
+  udp(ip(0.0.0.0) port(514));
+  tcp(ip(0.0.0.0) port(6514));
+};
+
+destination syslog_archive { file("/var/log/daplanet/" template_escape(no) create_dirs(yes) dir_prms(0777);
+};
+destination d_net { tcp("logging.dapla.net" port(6154) log_fifo_size(1000)); };
+
+log { source(s_src); destination(d_net); };
+
+@include  "/etc/syslog-ng/conf.d/*.conf"
