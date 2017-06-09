@@ -1,0 +1,14 @@
+/var/log/daplanet/*/*/*/* {
+  rotate 15
+  daily
+  missingok
+  notifempty
+  delaycompress
+  compres
+  size 512M
+  dateext
+  dateformat %Y-%m-%d
+  postrotate
+    /etc/init.d/syslog-ng reload >/dev/null
+  endscript
+}
