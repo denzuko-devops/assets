@@ -1,0 +1,22 @@
+---
+version: '2.1'
+services:
+  syslog:
+    pids_limit: 2048
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    build:
+      context: '.'
+    restart: "on-failure:5"
+    image: "syslog:0.0.1"
+    healthcheck:
+      test: "exit 0"
+    expose:
+      - 514
+    ports
+      - 0.0.0:514:514/udp
+      - 0.0.0:6514:6514/tcp
+# vimrc: set makeprg=docker-compose\ config\ -q : ei numbers sts=4 tw=4 ts=4:
