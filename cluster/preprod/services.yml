@@ -21,6 +21,7 @@ networks:
 # sysdig
 # registry && registry ui
 # powerdns && https://github.com/ngoduykhanh/PowerDNS-Admin
+# cicd!?
 
 services:
 
