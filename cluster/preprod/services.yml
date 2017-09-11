@@ -1,4 +1,5 @@
 ---
+# https://blog.alexellis.io/docker-stacks-attachable-networks/
 version: "3.3"
 
 networks:
@@ -18,6 +19,8 @@ networks:
 # logstash(syslog) -> escluster
 # docker security scanner
 # sysdig
+# registry && registry ui
+# powerdns && https://github.com/ngoduykhanh/PowerDNS-Admin
 
 services:
 
