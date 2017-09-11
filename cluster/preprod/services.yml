@@ -1,0 +1,149 @@
+---
+version: "3.3"
+
+networks:
+  traefik-net:
+    external: true
+
+# openssl ...
+# docker secrets create --label fqdn=example.test.com ssl.crt ssl.crt
+# docker secrets create --label fqdn=example.test.com ssl.key ssl.key
+# secrets:
+#   ssl.key:
+#   ssl.crt:
+
+services:
+
+  traefik:
+    image: containous/traefik:experimental
+    ports:
+      - "80:80/tcp"
+      - "8080:8080/tcp"
+      - "443:443/tcp"
+    networks:
+      - default
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # secrets:
+    #    - ssl.key
+    #    - ssl.crt
+    command:
+      - --accesslogsfile=/dev/stdout
+      - --web
+      - --docker
+      - --docker.swarmmode
+      - --docker.domain="dapla.net"
+      - --docker.watch
+      # - --entrypoints="Name:http Address::80 Redirecct.EntryPoint:https"
+      # - --entrypoints="Name:http Address::443 TLS:/ssl/ssl.crt,/ssl/ssl.key"
+      # - --defaultentrypoints="http,https"
+      - --defaultentrypoints="http"
+      - --logLevel=debug
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 90s
+      mode: global
+      placement:
+        constraints: [node.role == manager]
+
+  portainer:
+    image: portainer/portainer:latest
+    networks:
+      - default
+      - traefik-net
+    labels:
+      - traefik.tags=web
+      - traefik.frontend.rule=Host:dashboard.dapla.net
+      - traefik.backend=portainer
+      - traefik.port=9000
+      - traefik.docker.network=traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - "-H"
+      - "unix:///var/run/docker.sock"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 90s
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.tags=web
+        - traefik.frontend.rule=Host:dashboard.dapla.net
+        - traefik.backend=portainer
+        - traefik.port=9000
+        - traefik.docker.network=traefik-net
+        - traefik.backend.loadbalencer.method=drr
+
+  viz:
+    image: dockersamples/visualizer:latest
+    networks:
+      - default
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - traefik.frontend.rule=Host:status.dapla.net
+      - traefik.backend=viz
+      - traefik.port=8080
+      - traefik.docker.network=traefik-net
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 90s
+      mode: replicated
+      replicas: 1
+      labels:
+        - traefik.tags=web
+        - traefik.port=8080
+        - traefik.frontend.rule=Host:status.dapla.net
+        - traefik.backend=viz
+        - traefik.docker.network=traefik-net
+
+  whoami:
+    image: emilevauge/whoami:latest
+    networks:
+      - default
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - traefik.enabled=true
+      - traefik.tags=web
+      - traefik.port=80
+      - traefik.frontend.rule=Host:whoami.dapla.net
+      - traefik.backend=whoami
+      - traefik.backend.loadbalencer.method=drr
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 90s
+      mode: replicated
+      replicas: 4
+      placement:
+        constraints: [node.role == worker]
+      labels:
+        - traefik.enabled=true
+        - traefik.tags=web
+        - traefik.port=80
+        - traefik.docker.network=traefik-net
+        - traefik.frontend.rule=Host:whoami.dapla.net
+        - traefik.backend=whoami
+        - traefik.backend.loadbalencer.method=drr
+
+# vim: set ts=2 sts=2 sw=2 et si ai:
