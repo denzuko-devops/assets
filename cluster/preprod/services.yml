@@ -12,6 +12,13 @@ networks:
 #   ssl.key:
 #   ssl.crt:
 
+#TODO:
+# https://github.com/djmaze/shepherd
+# telegraf(docker) -> influxdb && grafana
+# logstash(syslog) -> escluster
+# docker security scanner
+# sysdig
+
 services:
 
   traefik:
