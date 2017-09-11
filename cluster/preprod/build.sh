@@ -1,13 +1,32 @@
 #!/bin/bash
+# build.sh - create a docker swarmmode cluster then deploy a service stack
+# Copyright (c)2017 Dwight Spencer <dwightaspencer@gmail.com>, All Rights Reserved.
+
 ENVIRONMENT=${ENVIRONMENT:-"stage"}
-MAXWORKERS=${MAXWORKERS:-"3"}
+MAXWORKERS=${MAXWORKERS:-"5"}
+MAXMASTERS=${MAXMASTERS:-"3"}
+SERVICES=${SERVICES:-"services.yml"}
 
 alias swarm="docker swarm"
 alias machine="docker-machine"
-alias compose="docker service deploy --docker-compose"
+alias compose="docker stack deploy --docker-compose"
 
 dmcreate() {
   machine create --engine-storage-driver overlay 2 -d generic $@
+}
+
+connect() {
+  local max=$1
+  local name=$2
+  local command=$3
+  local token=$4
+  local master=${5:-""}
+
+  for x in `seq 1 ${max}`; do
+    eval $(machine env ${ENVIRONMENT}.${name}-${x})
+    RHOST=$(machine ip active)
+    swarm ${command} --advertise-addr $RHOST --listen-addr $RHOST --token ${token} ${master}
+  done
 }
 
 #vpc=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 | jq -r ".[].VpcId")
@@ -19,22 +38,18 @@ dmcreate() {
 #aws ec2 create-route --route-table-id $iroute --destination-ipv4-cidr-block 0.0.0.0/0 --gateway-id $igateway
 #aws ec2 security group ...
 
-dmcreate ${ENVIRONMENT}.master
+for x in `seq 1 ${MAXMASTERS}`; do dmcreate ${ENVIRONMENT}.master-$x; done
+for x in `seq 1 ${MAXWORKERS}`; do dmcreate ${ENVIRONMENT}.worker-$x; done
 
-for x in `seq 1 ${MAXWORKERS}`; do
-  dmcreate ${ENVIRONMENT}.worker-$x
-done
+eval $(docker-machine env ${ENVINONMENT}.master-1)
 
-eval $(docker-machine env ${ENVIRONMENT}.master)
-MASTER=$(docker-machine ip active)
+export master_ip=$(docker-machine ip active)
+swarm join --advertise-addr ${master_ip} --listen-addr ${master_ip}
 
-swarm init --advertise-addr $MASTER --listen-addr $MASTER
-worker_token=$(swarm join-token worker -q)
+export manager_token=$(swarm join-token manager -q)
+export worker_token=$(swarm join-token worker -q)
 
-for x in `seq 1 ${MAXWORKERS}`; do
-  eval $(machine env ${ENVIRONMENT}.worker-$x)
-  RHOST=$(machine ip active)
-  swarm join --advertise-addr $RHOST --listen-addr $RHOST --token ${worker_token} $MASTER
-done
+connect ${MAXMASTER} "master" "init" ${master_token} ""
+connect ${MAXWORKER} "worker" "join" ${worker_token} "${master_ip}"
 
-compose services.yml
+compose services.yml ${ENVIRONMENT}
