@@ -1,20 +1,12 @@
 ---
 # https://blog.alexellis.io/docker-stacks-attachable-networks/
-version: "3.3"
+version: "3.6"
 
 networks:
   traefik-net:
     external: true
 
-# openssl ...
-# docker secrets create --label fqdn=example.test.com ssl.crt ssl.crt
-# docker secrets create --label fqdn=example.test.com ssl.key ssl.key
-# secrets:
-#   ssl.key:
-#   ssl.crt:
-
 #TODO:
-# https://github.com/djmaze/shepherd
 # telegraf(docker) -> influxdb && grafana
 # logstash(syslog) -> escluster
 # docker security scanner
@@ -123,6 +115,77 @@ services:
         - traefik.frontend.rule=Host:status.dapla.net
         - traefik.backend=viz
         - traefik.docker.network=traefik-net
+        
+          shepherd:
+    image: 'mazzolino/shepherd'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # /root/.docker/config.json:/root/.docker/config.json:ro
+    environment:
+      SLEEP_TIME: "5m"
+      BLACKLIST_SERVICES: "shepherd autoscale traefik agent"
+      WITH_REGISTRY_AUTH: "true"
+      DOCKER_HOST: "unix:///var/run/docker.sock"
+    deploy:
+      restart_policy:
+        condition: on-failure
+      mode: global
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        traefik.enable: "false"
+        orbiter: "false"
+
+  autoscale:
+    image: gianarb/orbiter:latest
+    #command: ["daemon", "--debug"]
+    environment:
+      DOCKER_HOST: "unix:///var/run/docker.sock"
+    ports:
+      - 8000
+    networks:
+      - public
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      restart_policy:
+        condition: on-failure
+      mode: replicated
+      replicas: 1
+      labels:
+        com.centurylinklabs.watchtower.enable: "true"
+        orbiter: "false"
+        traefik.enable: "true"
+        traefik.port: "8000"
+        traefik.docker.network: "public"
+        traefik.frontend.rule: "Host:scaler.dapla.net"
+        traefik.frontend.priority: "10"
+        traefik.frontend.entryPoints: "http, https"
+      placement:
+        constraints: [node.role == manager]
+
+  agent:
+    image: portainer/agent:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - target: 9001
+        published: 9001
+        protocol: tcp
+        mode: host
+    environment:
+      AGENT_CLUSTER_ADDR: tasks.agent
+    networks:
+      - internal
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        orbiter: "false"
+        traefik.enable: "false"
 
   whoami:
     image: emilevauge/whoami:latest
@@ -131,13 +194,6 @@ services:
       - traefik-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    labels:
-      - traefik.enabled=true
-      - traefik.tags=web
-      - traefik.port=80
-      - traefik.frontend.rule=Host:whoami.dapla.net
-      - traefik.backend=whoami
-      - traefik.backend.loadbalencer.method=drr
     deploy:
       restart_policy:
         condition: on-failure
@@ -156,5 +212,6 @@ services:
         - traefik.frontend.rule=Host:whoami.dapla.net
         - traefik.backend=whoami
         - traefik.backend.loadbalencer.method=drr
+        - traefik.frontend.priority: 10
 
 # vim: set ts=2 sts=2 sw=2 et si ai:
