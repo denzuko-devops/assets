@@ -11,13 +11,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: 'Terraform Format
+      - working-directory: workstation
+        
+      - name: 'Terraform Format'
         if: success()
-        working-directory: workstation/
         uses: hashicorp/terraform-github-actions@master
         with:
           tf_actions_version: 0.12.13
@@ -27,7 +29,6 @@ jobs:
 
       - name: 'Terraform Init'
         if: success()
-        working-directory: workstation/
         uses: hashicorp/terraform-github-actions@master
         with:
           tf_actions_version: 0.12.13
@@ -37,7 +38,6 @@ jobs:
           
       - name: 'Terraform Validate'
         if: success()
-        working-directory: workstation/
         uses: hashicorp/terraform-github-actions@master
         with:
           tf_actions_version: 0.12.13
