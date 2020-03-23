@@ -1,0 +1,8 @@
+---
+services:
+- name: email
+  addresses: # a list of addresses to send notifications to
+  - dwightaspencer@gmail.com
+  sender: # the email address of the notification sender
+    name: From
+    address: tracker@github.dapla.net
