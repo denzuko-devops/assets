@@ -1,0 +1,25 @@
+FROM alpine:latest AS base
+LABEL missing 'ripgrep jo nomad packer hub heroku zerotier travis-ci s3cmd aws-cli'
+RUN echo '@edge-testing http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> tee -a /etc/apk/repositories && \
+    echo '@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && \
+    echo '@edge-main http://dl-cdn.alpinelinux.org/alpine/edge/main' >> /etc/apk/repositories
+
+RUN apk upgrade --update-cache --available
+RUN apk add --no-cache \
+        ca-certificates build-base curl git rsync jq vim gnupg tmux openssh fzf \
+        python python-dev py-pip py-setuptools libmagic ansible \
+        terraform vault \
+    rm -rf /var/cache/apk/*
+RUN pip install direnv virtualenv honcho python-dateutil python-magic
+RUN echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' > /etc/nsswitch.conf
+    
+### Collapce layers, adding pubkey to root, change root pw, and set Environment
+FROM scratch
+COPY --from=base / .
+LABEL Maintainer "Dwight Spencer @denzuko"
+ADD https://github.com/denzuko.keys /root/.ssh/authorized_keys
+RUN echo "root:3bars4life" | chpasswd
+ENV TZ 'Etc/UTC-6'
+ENV DOMAINNAME 'mainnet.dapla.net'
+EXPOSE 22
+ENTRYPOINT ['/usr/sbin/sshd', '-D']
