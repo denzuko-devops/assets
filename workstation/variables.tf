@@ -1,4 +1,3 @@
-
 variable "keypair"        { default = "${env.AWS_KEYPAIR_NAME}"
 variable "instance_type"   { default = "t2.micro" }
 variable "security_groups" { default = "${env.AWS_SECURITY_GROUPS}" }
