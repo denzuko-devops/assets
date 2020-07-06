@@ -1,0 +1,130 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Compute cluster based on docker swarm for xmcore bbs
+
+Parameters:
+  EnvironmentType:
+    Description: "The runtime environment type"
+    Type: String
+    Default: prod
+    AllowedValues:
+      - prod
+      - nonprod
+      - uat
+    ConstraintDescription: EnvironmentType := <"prod"|"nonprod"|"uat">
+  Email:
+    Description: "email"
+    Type: "String"
+    Default: "support+devops@dapla.net"
+  RepoURL:
+    Description: "ansible-pull url"
+    Type: "String"
+    Default: "https://raw.github.com/denzuko-devops/assets/provision.yml"
+  RepoVersion:
+    Description: "Repo branch/version to pull"
+    Type: "String"
+    Default: "master"
+  DefaultOSUser:
+    Description: "Default login user"
+    Type: "String"
+    Default: "ubuntu"
+    AllowedValues:
+      - "ec2user"
+      - "ubuntu"
+      - "alpine"
+      - "pi"
+  DefaultPackageManager:
+    Description: "Default packagem"
+    Type: "String"
+    Default: "ubuntu"
+    AllowedValues:
+      - "ec2user"
+      - "ubuntu"
+      - "alpine"
+      - "pi"
+  
+Mappings:
+  cmdb:
+    orgunit: "XMCore BBS"
+    organization: "Dallas Makerspace"
+    commonname: "xmcore-compute"
+    locality: !Ref "AWS::Region"
+    environment: !Ref "EnvironmentType"
+    application: "infrastructure"
+    role: "general compute"
+    owner: !Ref Email
+    customer: "VCC-01"
+    costcenter: "VCC-01"
+    oid: "iso.org.dod.internet.42387"
+    duns: "iso.org.duns.039271257"
+    
+  RegionMap:
+    eu-west-2:
+      HVM64: "ami-04e7b4117bb0488e4"
+      TimeZone: "Offhours tz=UTC"
+    us-east-1:
+      HVM64: "ami-04e7b4117bb0488e4"
+      TimeZone: "Offhours tz=ET"
+    ca-central-1:
+      HVM64: "ami-04e7b4117bb0488e4"
+      TimeZone: "Offhours tz=CT"
+    us-west-1:
+      HVM64: "ami-04e7b4117bb0488e4"
+      TimeZone: "Offhours tz=PT"
+    ap-south-1:
+      HVM64: "ami-04e7b4117bb0488e4"
+      TimeZone: "Offhours tz=IT"
+
+Resources:
+  XmcoreComputeCluster:
+    Type: "AWS:EC2:Instance"
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", HVM64]
+      InstanceType: !FindInMap
+      Tags:
+        - Key: net.matrix.orgunit
+          Value: !Fn:FindInMap [cmdb, orgunit]
+
+        - Key: net.matrix.organization
+          Value: !Fn:FindInMap [cmdb, organization]
+
+        - Key: net.matrix.environment
+          Value: !Fn:FindInMap [cmdb, environment]
+
+        - Key: net.matrix.owner
+          Value: !Fn:FindInMap [cmdb, owner]
+
+        - Key: net.matrix.application
+          Value: !Fn:FindInMap [cmdb, application]
+
+        - Key: net.matrix.role
+          Value: !Fn:FindInMap [cmdb, role]
+
+        - Key: net.matrix.oid
+          Value: !Fn:FindInMap [cmdb, oid]
+
+        - Key: net.matrix.downtime
+          Value: !FindInMap [RegionMap, !Ref "AWS::Region", TimeZone]
+
+          UserData: 
+            Fn:Base64: !Sub |
+              #!/bin/bash
+              set -x
+              exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1\n
+              ${DefaultPackageManager} install -y git python3 ansible
+              echo 'localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3' > /etc/ansible/hosts
+              ansible-pull -C ${RepoVersion} -U ${RepoURL} provision.yml
+              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource XmcoreComputeCluster --region ${AWS:Region}
+        CreationPolicy:
+          ResourceSignal:
+            Timeout: "PT30M"
+
+Outputs:
+  PublicIp:
+    Description: Return the public ip address
+    Value: !Fn::GetAtt [XmcoreComputeCluster,PublicIp]
+    Export:
+      Name: !Fn::Sub "${AWS:StackName}-PublicIp"
+...
+#vim: set sts=4 ts=4 et si ft=yaml:
