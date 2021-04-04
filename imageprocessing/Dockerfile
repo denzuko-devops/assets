@@ -7,7 +7,7 @@ ARG FWATCHDOG_VERSION "0.7.1"
 ARG ENCODER_OPTS "- -resize 200% fd:1 "
 ARG BUILDID "0.0.1"
 
-ENV affinity:net.matrix.role= cpu*servers
+ENV affinity:net.matrix.role=cpu*servers
 ENV affinity:net.matrix.arch=x86_64
 
 # the following are presented as generally accepted
