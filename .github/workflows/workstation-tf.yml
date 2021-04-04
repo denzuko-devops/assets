@@ -1,23 +1,25 @@
+---
 # This is a basic workflow to help you get started with Actions
 
 name: Workstation Terraform
 
-# Controls when the action will run. Triggers the workflow on push or pull request 
+# Controls when the action will run. Triggers the workflow on push/pull request
 # events but only for the master branch
 on:
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
       - working-directory: workstation
-        
+
       - name: 'Terraform Format'
         if: success()
         uses: hashicorp/terraform-github-actions@master
@@ -35,7 +37,7 @@ jobs:
           tf_actions_subcommand: 'init'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: 'Terraform Validate'
         if: success()
         uses: hashicorp/terraform-github-actions@master
