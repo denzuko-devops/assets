@@ -6,6 +6,10 @@ on:
     branches:
       - master
 
+defaults:
+  run:
+    working-directory: workstation
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,26 +24,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - working-directory: workstation
-
       - name: 'Terraform Format'
-        id: format
-        if: success()
         run: terraform fmt --check
         continue-on-error: true
 
       - name: 'Terraform Init'
-        id: init
-        if: success()
         run: terraform init
 
       - name: 'Terraform Validate'
-        id: validate
-        if: success()
         run: terraform validate -no-color
+        continue-on-error: true
 
       - name: 'Terraform Plan'
-        if: success()
         id: plan
         run: terraform plan  -no-color
 ...
